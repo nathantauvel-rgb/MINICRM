@@ -2,17 +2,16 @@
 
 import Link from "next/link";
 import { useRef, useState, useEffect, useTransition } from "react";
-import { deleteQuoteAction, updateQuoteStatusAction } from "../actions";
-import { convertQuoteToInvoiceAction } from "../../invoices/actions";
+import { deleteInvoiceAction, updateInvoiceStatusAction } from "../actions";
 
-const STATUSES: { value: "draft" | "sent" | "accepted" | "refused"; label: string }[] = [
+const STATUSES: { value: "draft" | "sent" | "paid" | "cancelled"; label: string }[] = [
   { value: "draft", label: "Brouillon" },
-  { value: "sent", label: "Envoyé" },
-  { value: "accepted", label: "Accepté" },
-  { value: "refused", label: "Refusé" },
+  { value: "sent", label: "Envoyée" },
+  { value: "paid", label: "Payée" },
+  { value: "cancelled", label: "Annulée" },
 ];
 
-export default function QuoteActions({ id, status }: { id: string; status: string }) {
+export default function InvoiceActions({ id, status }: { id: string; status: string }) {
   const [pending, startTransition] = useTransition();
   const [statusOpen, setStatusOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -25,11 +24,11 @@ export default function QuoteActions({ id, status }: { id: string; status: strin
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
-  function changeStatus(s: "draft" | "sent" | "accepted" | "refused") {
+  function changeStatus(s: "draft" | "sent" | "paid" | "cancelled") {
     setStatusOpen(false);
     startTransition(async () => {
       try {
-        await updateQuoteStatusAction(id, s);
+        await updateInvoiceStatusAction(id, s);
       } catch (e) {
         alert(e instanceof Error ? e.message : "Erreur");
       }
@@ -37,21 +36,10 @@ export default function QuoteActions({ id, status }: { id: string; status: strin
   }
 
   function onDelete() {
-    if (!confirm("Supprimer ce devis définitivement ?")) return;
+    if (!confirm("Supprimer cette facture définitivement ?\n\nAttention : la numérotation continue est obligatoire en France. Préférez 'Annuler' pour conserver la trace.")) return;
     startTransition(async () => {
       try {
-        await deleteQuoteAction(id);
-      } catch (e) {
-        alert(e instanceof Error ? e.message : "Erreur");
-      }
-    });
-  }
-
-  function onConvert() {
-    if (!confirm("Créer une facture à partir de ce devis ?")) return;
-    startTransition(async () => {
-      try {
-        await convertQuoteToInvoiceAction(id);
+        await deleteInvoiceAction(id);
       } catch (e) {
         alert(e instanceof Error ? e.message : "Erreur");
       }
@@ -61,7 +49,7 @@ export default function QuoteActions({ id, status }: { id: string; status: strin
   return (
     <div className="flex flex-wrap items-center gap-2">
       <a
-        href={`/dashboard/quotes/${id}/pdf`}
+        href={`/dashboard/invoices/${id}/pdf`}
         target="_blank"
         rel="noopener noreferrer"
         className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition"
@@ -81,7 +69,7 @@ export default function QuoteActions({ id, status }: { id: string; status: strin
           Statut ▾
         </button>
         {statusOpen && (
-          <div className="absolute right-0 mt-1 w-40 rounded-lg border border-slate-200 bg-white shadow-lg">
+          <div className="absolute right-0 mt-1 w-40 rounded-lg border border-slate-200 bg-white shadow-lg z-10">
             {STATUSES.map((s) => (
               <button
                 key={s.value}
@@ -97,16 +85,8 @@ export default function QuoteActions({ id, status }: { id: string; status: strin
         )}
       </div>
 
-      <button
-        onClick={onConvert}
-        disabled={pending}
-        className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition disabled:opacity-60"
-      >
-        Convertir en facture
-      </button>
-
       <Link
-        href={`/dashboard/quotes/${id}/edit`}
+        href={`/dashboard/invoices/${id}/edit`}
         className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
       >
         Modifier
