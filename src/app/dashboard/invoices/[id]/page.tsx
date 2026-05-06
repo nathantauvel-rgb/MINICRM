@@ -49,6 +49,12 @@ export default async function InvoiceDetailPage({
             Émise le {formatDate(invoice.issue_date)} · Échéance {formatDate(invoice.due_date)}
             {invoice.paid_at && <> · Payée le {formatDate(invoice.paid_at)}</>}
           </p>
+          {invoice.reminder_count > 0 && invoice.last_reminder_at && (
+            <p className="mt-1 text-xs text-slate-500">
+              {invoice.reminder_count} rappel{invoice.reminder_count > 1 ? "s" : ""} envoyé{invoice.reminder_count > 1 ? "s" : ""} · dernier le{" "}
+              {formatDate(invoice.last_reminder_at)}
+            </p>
+          )}
         </div>
 
         <InvoiceActions id={id} status={invoice.status} />

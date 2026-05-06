@@ -2,7 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { renderToBuffer } from "@react-pdf/renderer";
 import { createClient } from "@/lib/supabase/server";
+import { getResend, RESEND_FROM } from "@/lib/email/resend";
+import { buildReminderEmail } from "@/lib/email/templates";
+import { InvoicePDF, type InvoiceData } from "@/lib/pdf/InvoicePDF";
+import { formatEUR, formatDate } from "@/lib/format";
 
 type ItemInput = {
   description: string;
@@ -268,4 +273,126 @@ export async function convertQuoteToInvoiceAction(quoteId: string) {
   revalidatePath("/dashboard/invoices");
   revalidatePath("/dashboard/quotes");
   redirect(`/dashboard/invoices/${invoice.id}`);
+}
+
+export async function sendInvoiceReminderAction(invoiceId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Non authentifié.");
+
+  const { data: invoice, error: iErr } = await supabase
+    .from("invoices")
+    .select("*, clients(*), invoice_items(*)")
+    .eq("id", invoiceId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (iErr || !invoice) throw new Error("Facture introuvable.");
+
+  const client = invoice.clients as {
+    name: string;
+    company: string | null;
+    email: string | null;
+    address: string | null;
+    siret: string | null;
+  } | null;
+
+  if (!client?.email) {
+    throw new Error(
+      "Ce client n'a pas d'email. Ajoutez-en un avant d'envoyer un rappel.",
+    );
+  }
+
+  const { data: settings } = await supabase
+    .from("user_settings")
+    .select("*")
+    .maybeSingle();
+
+  if (!settings?.company_name) {
+    throw new Error(
+      "Renseignez le nom de votre entreprise dans Paramètres avant d'envoyer un rappel.",
+    );
+  }
+
+  const items = ((invoice.invoice_items as Array<{ description: string; quantity: number; unit_price: number; position: number }>) ?? [])
+    .slice()
+    .sort((a, b) => a.position - b.position)
+    .map((it) => ({
+      description: it.description,
+      quantity: Number(it.quantity),
+      unit_price: Number(it.unit_price),
+    }));
+
+  const pdfData: InvoiceData = {
+    number: invoice.number,
+    issue_date: invoice.issue_date,
+    due_date: invoice.due_date,
+    paid_at: invoice.paid_at,
+    notes: invoice.notes,
+    total_ht: Number(invoice.total_ht),
+    client: {
+      name: client.name,
+      company: client.company,
+      email: client.email,
+      address: client.address,
+      siret: client.siret,
+    },
+    items,
+    settings,
+  };
+
+  const pdfBuffer = await renderToBuffer(<InvoicePDF data={pdfData} />);
+
+  const today = new Date();
+  const due = new Date(invoice.due_date);
+  const daysLate = Math.max(
+    0,
+    Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24)),
+  );
+
+  const email = buildReminderEmail({
+    clientName: client.company || client.name,
+    invoiceNumber: invoice.number,
+    amount: formatEUR(Number(invoice.total_ht)),
+    issueDate: formatDate(invoice.issue_date),
+    dueDate: formatDate(invoice.due_date),
+    daysLate,
+    companyName: settings.company_name,
+    iban: settings.iban,
+    reminderCount: invoice.reminder_count ?? 0,
+  });
+
+  const resend = getResend();
+  const { error: sendErr } = await resend.emails.send({
+    from: RESEND_FROM,
+    to: client.email,
+    replyTo: settings.email ?? undefined,
+    subject: email.subject,
+    html: email.html,
+    text: email.text,
+    attachments: [
+      {
+        filename: `${invoice.number}.pdf`,
+        content: Buffer.from(pdfBuffer).toString("base64"),
+      },
+    ],
+  });
+
+  if (sendErr) {
+    throw new Error(`Échec envoi : ${sendErr.message}`);
+  }
+
+  await supabase
+    .from("invoices")
+    .update({
+      last_reminder_at: new Date().toISOString(),
+      reminder_count: (invoice.reminder_count ?? 0) + 1,
+      status: invoice.status === "draft" ? "sent" : invoice.status,
+    })
+    .eq("id", invoiceId)
+    .eq("user_id", user.id);
+
+  revalidatePath("/dashboard/invoices");
+  revalidatePath(`/dashboard/invoices/${invoiceId}`);
 }

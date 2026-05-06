@@ -2,7 +2,11 @@
 
 import Link from "next/link";
 import { useRef, useState, useEffect, useTransition } from "react";
-import { deleteInvoiceAction, updateInvoiceStatusAction } from "../actions";
+import {
+  deleteInvoiceAction,
+  updateInvoiceStatusAction,
+  sendInvoiceReminderAction,
+} from "../actions";
 
 const STATUSES: { value: "draft" | "sent" | "paid" | "cancelled"; label: string }[] = [
   { value: "draft", label: "Brouillon" },
@@ -29,6 +33,18 @@ export default function InvoiceActions({ id, status }: { id: string; status: str
     startTransition(async () => {
       try {
         await updateInvoiceStatusAction(id, s);
+      } catch (e) {
+        alert(e instanceof Error ? e.message : "Erreur");
+      }
+    });
+  }
+
+  function onSendReminder() {
+    if (!confirm("Envoyer un rappel par email au client ?")) return;
+    startTransition(async () => {
+      try {
+        await sendInvoiceReminderAction(id);
+        alert("Rappel envoyé.");
       } catch (e) {
         alert(e instanceof Error ? e.message : "Erreur");
       }
@@ -84,6 +100,20 @@ export default function InvoiceActions({ id, status }: { id: string; status: str
           </div>
         )}
       </div>
+
+      {status !== "paid" && status !== "cancelled" && (
+        <button
+          onClick={onSendReminder}
+          disabled={pending}
+          className="inline-flex items-center gap-1.5 rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition disabled:opacity-60"
+        >
+          <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+            <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+          </svg>
+          Envoyer un rappel
+        </button>
+      )}
 
       <Link
         href={`/dashboard/invoices/${id}/edit`}
