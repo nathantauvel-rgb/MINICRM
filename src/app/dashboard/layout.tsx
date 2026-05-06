@@ -17,9 +17,18 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
+  const { data: settings } = await supabase
+    .from("user_settings")
+    .select("subscription_status, trial_ends_at")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
   return (
     <div className="flex min-h-screen bg-slate-50">
-      <Sidebar />
+      <Sidebar
+        subscriptionStatus={settings?.subscription_status ?? "trialing"}
+        trialEndsAt={settings?.trial_ends_at ?? null}
+      />
       <div className="flex flex-1 flex-col">
         <header className="flex h-16 items-center justify-end border-b border-slate-200 bg-white px-6">
           <UserMenu email={user.email ?? ""} />

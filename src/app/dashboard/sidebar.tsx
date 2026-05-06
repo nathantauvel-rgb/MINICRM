@@ -10,10 +10,23 @@ const navItems = [
   { href: "/dashboard/quotes", label: "Devis", icon: FileIcon },
   { href: "/dashboard/invoices", label: "Factures", icon: ReceiptIcon },
   { href: "/dashboard/settings", label: "Paramètres", icon: SettingsIcon },
+  { href: "/dashboard/billing", label: "Abonnement", icon: CreditCardIcon },
 ];
 
-export default function Sidebar() {
+type Props = {
+  subscriptionStatus: string;
+  trialEndsAt: string | null;
+};
+
+export default function Sidebar({ subscriptionStatus, trialEndsAt }: Props) {
   const pathname = usePathname();
+
+  const trialDaysLeft = trialEndsAt
+    ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : 0;
+  const isTrial = subscriptionStatus === "trialing";
+  const isActive = subscriptionStatus === "active";
+  const isPastDue = subscriptionStatus === "past_due";
 
   return (
     <aside className="hidden w-64 flex-col border-r border-slate-200 bg-white lg:flex">
@@ -45,12 +58,40 @@ export default function Sidebar() {
       </nav>
 
       <div className="border-t border-slate-200 p-4">
-        <div className="rounded-lg bg-emerald-50 p-4">
-          <p className="text-xs font-semibold text-emerald-900">Période d&apos;essai</p>
-          <p className="mt-1 text-xs text-emerald-700">14 jours restants</p>
-        </div>
+        {isPastDue ? (
+          <Link href="/dashboard/billing" className="block rounded-lg bg-red-50 p-4 hover:bg-red-100 transition">
+            <p className="text-xs font-semibold text-red-900">Paiement en retard</p>
+            <p className="mt-1 text-xs text-red-700">Mettez à jour votre carte →</p>
+          </Link>
+        ) : isActive ? (
+          <Link href="/dashboard/billing" className="block rounded-lg bg-emerald-50 p-4 hover:bg-emerald-100 transition">
+            <p className="text-xs font-semibold text-emerald-900">Abonnement actif</p>
+            <p className="mt-1 text-xs text-emerald-700">Plan Solo · 9€/mois</p>
+          </Link>
+        ) : isTrial && trialDaysLeft > 0 ? (
+          <Link href="/dashboard/billing" className="block rounded-lg bg-emerald-50 p-4 hover:bg-emerald-100 transition">
+            <p className="text-xs font-semibold text-emerald-900">Essai gratuit</p>
+            <p className="mt-1 text-xs text-emerald-700">
+              {trialDaysLeft} jour{trialDaysLeft > 1 ? "s" : ""} restant{trialDaysLeft > 1 ? "s" : ""}
+            </p>
+          </Link>
+        ) : (
+          <Link href="/dashboard/billing" className="block rounded-lg bg-slate-100 p-4 hover:bg-slate-200 transition">
+            <p className="text-xs font-semibold text-slate-900">Essai expiré</p>
+            <p className="mt-1 text-xs text-slate-700">S&apos;abonner →</p>
+          </Link>
+        )}
       </div>
     </aside>
+  );
+}
+
+function CreditCardIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="2" y="5" width="20" height="14" rx="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M2 10h20" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 

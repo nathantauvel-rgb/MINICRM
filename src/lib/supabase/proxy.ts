@@ -46,5 +46,27 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Paywall: enforce active subscription / valid trial for /dashboard
+  // Always allow /dashboard/billing so the user can subscribe or update payment.
+  if (user && isProtected && !pathname.startsWith("/dashboard/billing")) {
+    const { data: settings } = await supabase
+      .from("user_settings")
+      .select("subscription_status, trial_ends_at")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const status = settings?.subscription_status ?? "trialing";
+    const trialEndsAt = settings?.trial_ends_at;
+    const trialActive =
+      status === "trialing" && trialEndsAt && new Date(trialEndsAt) > new Date();
+    const subscriptionActive = status === "active";
+
+    if (!trialActive && !subscriptionActive) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard/billing";
+      return NextResponse.redirect(url);
+    }
+  }
+
   return supabaseResponse;
 }
