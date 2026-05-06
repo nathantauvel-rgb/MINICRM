@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Logo from "@/components/Logo";
 import { createClient } from "@/lib/supabase/client";
 
 export default function SignupPage() {
@@ -34,61 +35,126 @@ export default function SignupPage() {
       return;
     }
 
-    setInfo("Vérifie ta boîte mail pour confirmer ton inscription.");
+    setInfo("Vérifiez votre boîte mail pour confirmer votre inscription.");
     setLoading(false);
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-6">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-sm space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm"
-      >
-        <h1 className="text-2xl font-semibold">Inscription</h1>
+    <main className="flex min-h-screen flex-col bg-slate-50">
+      <div className="px-6 pt-6">
+        <Logo />
+      </div>
 
-        <div className="space-y-1">
-          <label htmlFor="email" className="text-sm font-medium">Email</label>
-          <input
-            id="email"
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-          />
+      <div className="flex flex-1 items-center justify-center p-6">
+        <div className="w-full max-w-sm">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              Démarrez en 30 secondes
+            </h1>
+            <p className="mt-2 text-sm text-slate-600">
+              14 jours gratuits. Sans carte bancaire.
+            </p>
+          </div>
+
+          <form
+            onSubmit={handleSubmit}
+            className="mt-8 space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+          >
+            <Field
+              id="email"
+              label="Email"
+              type="email"
+              value={email}
+              onChange={setEmail}
+              placeholder="vous@exemple.fr"
+              autoComplete="email"
+            />
+
+            <div className="space-y-1.5">
+              <label htmlFor="password" className="text-sm font-medium text-slate-700">
+                Mot de passe
+              </label>
+              <input
+                id="password"
+                type="password"
+                required
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="6 caractères minimum"
+                autoComplete="new-password"
+                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+              />
+            </div>
+
+            {error && (
+              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+            {info && (
+              <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                {info}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition disabled:opacity-60"
+            >
+              {loading ? "Création..." : "Créer mon compte"}
+            </button>
+
+            <p className="text-center text-xs text-slate-500">
+              En créant un compte vous acceptez nos conditions d&apos;utilisation.
+            </p>
+          </form>
+
+          <p className="mt-6 text-center text-sm text-slate-600">
+            Déjà un compte ?{" "}
+            <Link href="/login" className="font-semibold text-emerald-700 hover:text-emerald-800">
+              Connexion
+            </Link>
+          </p>
         </div>
-
-        <div className="space-y-1">
-          <label htmlFor="password" className="text-sm font-medium">Mot de passe</label>
-          <input
-            id="password"
-            type="password"
-            required
-            minLength={6}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-          />
-        </div>
-
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        {info && <p className="text-sm text-green-600">{info}</p>}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
-        >
-          {loading ? "Création..." : "Créer mon compte"}
-        </button>
-
-        <p className="text-center text-sm text-gray-600">
-          Déjà un compte ?{" "}
-          <Link href="/login" className="font-medium text-black underline">
-            Connexion
-          </Link>
-        </p>
-      </form>
+      </div>
     </main>
+  );
+}
+
+function Field({
+  id,
+  label,
+  type,
+  value,
+  onChange,
+  placeholder,
+  autoComplete,
+}: {
+  id: string;
+  label: string;
+  type: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  autoComplete?: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor={id} className="text-sm font-medium text-slate-700">
+        {label}
+      </label>
+      <input
+        id={id}
+        type={type}
+        required
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+      />
+    </div>
   );
 }
