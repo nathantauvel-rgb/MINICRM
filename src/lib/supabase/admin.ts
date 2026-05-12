@@ -1,7 +1,7 @@
-import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 
 /**
- * Service-role client — bypasses RLS.
+ * Service-role client — bypasses RLS and supports auth.admin.
  * Only use server-side (Server Actions, Route Handlers).
  */
 export function createAdminClient() {
@@ -12,7 +12,7 @@ export function createAdminClient() {
       "NEXT_PUBLIC_SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY sont requis.",
     );
   }
-  return createServerClient(url, serviceKey, {
-    cookies: { getAll: () => [], setAll: () => {} },
+  return createClient(url, serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
   });
 }
