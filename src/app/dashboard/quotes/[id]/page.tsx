@@ -44,7 +44,13 @@ export default async function QuoteDetailPage({
           </p>
         </div>
 
-        <QuoteActions id={id} status={quote.status} />
+        <QuoteActions
+          id={id}
+          status={quote.status}
+          signingToken={quote.signing_token ?? null}
+          signedAt={quote.signed_at ?? null}
+          signerName={quote.signer_name ?? null}
+        />
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">

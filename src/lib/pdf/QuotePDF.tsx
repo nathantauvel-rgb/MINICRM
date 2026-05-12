@@ -1,4 +1,4 @@
-import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet, Image } from "@react-pdf/renderer";
 
 type QuoteItem = {
   description: string;
@@ -31,6 +31,10 @@ type QuoteData = {
     vat_number: string | null;
     payment_terms_days: number;
   } | null;
+  // Electronic signature (optional)
+  signatureData?: string | null;
+  signedAt?: string | null;
+  signerName?: string | null;
 };
 
 const formatEUR = (n: number) =>
@@ -97,6 +101,23 @@ const styles = StyleSheet.create({
   notes: { marginTop: 32, padding: 12, backgroundColor: "#f8fafc", borderRadius: 4 },
   notesTitle: { fontSize: 9, fontWeight: 700, color: "#475569", marginBottom: 4 },
   legal: { marginTop: 24, fontSize: 8, color: "#64748b" },
+  signatureBox: {
+    marginTop: 24,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+  },
+  signatureCard: {
+    width: 220,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 6,
+    padding: 10,
+    backgroundColor: "#f8fafc",
+  },
+  signatureLabel: { fontSize: 8, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 },
+  signatureImg: { width: 200, height: 60, objectFit: "contain" },
+  signatureName: { fontSize: 9, color: "#0f172a", fontWeight: 700, marginTop: 4 },
+  signatureDate: { fontSize: 8, color: "#64748b", marginTop: 2 },
   footer: {
     position: "absolute",
     bottom: 24,
@@ -109,7 +130,7 @@ const styles = StyleSheet.create({
 });
 
 export function QuotePDF({ data }: { data: QuoteData }) {
-  const { settings, client, items, number, issue_date, valid_until, notes, total_ht } = data;
+  const { settings, client, items, number, issue_date, valid_until, notes, total_ht, signatureData, signedAt, signerName } = data;
 
   return (
     <Document>
@@ -211,8 +232,31 @@ export function QuotePDF({ data }: { data: QuoteData }) {
           {settings?.iban && <Text>IBAN : {settings.iban}</Text>}
         </View>
 
+        {signatureData && (
+          <View style={styles.signatureBox}>
+            <View style={styles.signatureCard}>
+              <Text style={styles.signatureLabel}>Signature électronique</Text>
+              <Image style={styles.signatureImg} src={signatureData} />
+              {signerName && <Text style={styles.signatureName}>{signerName}</Text>}
+              {signedAt && (
+                <Text style={styles.signatureDate}>
+                  Signé le{" "}
+                  {new Intl.DateTimeFormat("fr-FR", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }).format(new Date(signedAt))}
+                </Text>
+              )}
+            </View>
+          </View>
+        )}
+
         <Text style={styles.footer}>
           Devis {number} · {settings?.company_name || ""}
+          {signatureData ? " · Signé électroniquement" : ""}
         </Text>
       </Page>
     </Document>

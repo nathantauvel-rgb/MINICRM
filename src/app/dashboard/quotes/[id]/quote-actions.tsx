@@ -12,9 +12,18 @@ const STATUSES: { value: "draft" | "sent" | "accepted" | "refused"; label: strin
   { value: "refused", label: "Refusé" },
 ];
 
-export default function QuoteActions({ id, status }: { id: string; status: string }) {
+type Props = {
+  id: string;
+  status: string;
+  signingToken: string | null;
+  signedAt: string | null;
+  signerName: string | null;
+};
+
+export default function QuoteActions({ id, status, signingToken, signedAt, signerName }: Props) {
   const [pending, startTransition] = useTransition();
   const [statusOpen, setStatusOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -58,6 +67,22 @@ export default function QuoteActions({ id, status }: { id: string; status: strin
     });
   }
 
+  async function copySigningLink() {
+    if (!signingToken) return;
+    // Build the URL client-side using window.location so it works on any domain
+    const base = typeof window !== "undefined"
+      ? `${window.location.protocol}//${window.location.host}`
+      : "";
+    const url = `${base}/sign/${signingToken}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      prompt("Copiez ce lien et envoyez-le à votre client :", url);
+    }
+  }
+
   return (
     <div className="flex flex-wrap items-center gap-2">
       <a
@@ -71,6 +96,28 @@ export default function QuoteActions({ id, status }: { id: string; status: strin
         </svg>
         PDF
       </a>
+
+      {/* Signing link button */}
+      {signedAt ? (
+        <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 border border-emerald-200">
+          <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+          </svg>
+          Signé{signerName ? ` par ${signerName}` : ""}
+        </span>
+      ) : signingToken ? (
+        <button
+          type="button"
+          onClick={copySigningLink}
+          className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
+          title="Copier le lien de signature"
+        >
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          {copied ? "Lien copié ✓" : "Lien de signature"}
+        </button>
+      ) : null}
 
       <div className="relative" ref={ref}>
         <button

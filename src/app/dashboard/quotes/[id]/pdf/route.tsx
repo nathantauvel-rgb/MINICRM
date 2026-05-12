@@ -59,6 +59,9 @@ export async function GET(
     client,
     items,
     settings: settings ?? null,
+    signatureData: quote.signature_data ?? null,
+    signedAt: quote.signed_at ?? null,
+    signerName: quote.signer_name ?? null,
   };
 
   const buffer = await renderToBuffer(<QuotePDF data={data} />);
